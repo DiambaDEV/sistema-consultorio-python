@@ -1,46 +1,100 @@
-from modelos.Paciente import Paciente
-from services.PacienteService import PacienteService
 from repositorio.BancoDeDados import BancoDeDados
-from repositorio.PacienteRepository import PacienteRepository
-from utils.cpf_utils import formatar_cpf
-from utils.cpf_utils import validar_cpf
-
 db = BancoDeDados()
+from repositorio.PacienteRepository import PacienteRepository
+from services.PacienteService import PacienteService
 repository = PacienteRepository(db)
 service = PacienteService(repository)
 
+from modelos.Paciente import Paciente
+from utils.cpf_utils import formatar_cpf
+from utils.cpf_utils import validar_cpf
+from modelos.Agendamento import Agendamento
+from repositorio.AgendamentoRepository import AgendamentoRepository
+from services.AgendamentoService import AgendamentoService
+
+agendamento_repository = AgendamentoRepository(db)
+agendamento_service = AgendamentoService(agendamento_repository)
+
+from datetime import datetime
+from utils.telefone_utils import validar_telefone, formatar_telefone
+from utils.cpf_utils import formatar_cpf, validar_cpf   
+from utils.data_utils import formatar_data  
+
 while True:
+
     print("\n=== SISTEMA CONSULTÓRIO ===")
     print("1 - Cadastrar paciente")
     print("2 - Buscar pacientes")
     print("3 - Listar pacientes")
     print("4 - Editar paciente")
     print("5 - Remover paciente")
-    print("6 - Sair")
+    print("6 - Criar agendamento")
+    print("7 - Listar agendamentos")
+    print("0 - Sair")
+
+
 
     opcao = input("Escolha uma opção: ")
 
     if opcao == "1":
-        nome = input("Nome: ")
+        
+        while True:
+
+            nome = input("Nome: ")
+
+            if nome.replace(" ", "").isalpha():
+                break
+            else:
+                print("Nome inválido. Digite apenas letras.")
+        
         cpf = input("CPF (somente números): ")
 
+        cpf = ''.join(filter(str.isdigit, cpf))
+
         if not validar_cpf(cpf):
-            print("CPF inválido! Deve conter exatamente 11 números.")
+            print("CPF inválido.")
+            continue
 
         if service.buscar_por_cpf(cpf):
-            print("Paciente já cadastrado.")
-        else:
-            telefone = input("Telefone: ")
+            print("Paciente já cadastrado com esse CPF.")
+            continue    
+
+        while True:
+
             data_nascimento = input("Data de nascimento (AAAA-MM-DD): ")
 
-            paciente = Paciente(
-                nome,
-                cpf,
-                telefone,
-                data_nascimento
-            )
+            try:
+                date = datetime.strptime(data_nascimento, "%Y-%m-%d")
+
+                if data > datetime.now():
+                    print("Data de nascimento não pode ser no futuro.")
+                    continue    
+                break
+
+            except ValueError:
+                print("Data inválida. Digite no formato AAAA-MM-DD.")   
+
+        paciente = Paciente(
+            nome,
+            cpf,
+            telefone,
+            data_nascimento
+        )
+
+        while True:
+
+            telefone = input("Telefone (somente números): ")
+
+            if validar_telefone(telefone):
+                telefone = ''.join(filter(str.isdigit, telefone))
+                break
+            else:
+                print("Telefone inválido. Digite um telefone DDD + número, com 10 ou 11 dígitos numéricos.")
+
+        
 
         service.cadastrar_paciente(paciente)
+
 
     elif opcao == "2":
         print("\n1 - Buscar por CPF")
@@ -71,10 +125,15 @@ while True:
 
     elif opcao == "3":
         pacientes = service.listar_pacientes()
-        
+    
         if pacientes:
             for p in pacientes:
-                print(f"Nome: {p[1]} | CPF: {formatar_cpf(p[2])} | Telefone: {p[3]} | Data: {p[4]}")
+                print(
+                    f"Nome: {p[1]} | "
+                    f"CPF: {formatar_cpf(p[2])} | "
+                    f"Telefone: {formatar_telefone(p[3])} | "
+                    f"Data: {formatar_data(p[4])}"
+                )
         else:
             print("Nenhum paciente cadastrado.")
 
@@ -123,3 +182,78 @@ while True:
 
             except (IndexError, ValueError):
                 print("Escolha inválida.")
+
+    elif opcao == "6":
+
+        cpf = input("CPF do paciente: ")
+
+        paciente = service.buscar_por_cpf(cpf)
+
+        if not paciente:
+            print("Paciente não encontrado.")
+
+        else:
+
+            # 🔹 DATA
+            while True:
+                data = input("Data de agendamento (AAAA-MM-DD): ")
+
+                try:
+                    datetime.strptime(data, "%Y-%m-%d")
+                    break
+                except ValueError:
+                    print("Data inválida. Digite novamente.")
+
+            # 🔹 HORA + CONFLITO
+            while True:
+                hora = input("Hora de agendamento (HH:MM): ")
+
+                try:
+                    datetime.strptime(hora, "%H:%M")
+                except ValueError:
+                    print("Hora inválida. Digite novamente.")
+                    continue
+
+                agendamento_existente = agendamento_repository.buscar_por_data_hora(
+                    data,
+                    hora
+                )
+
+                if agendamento_existente:
+                    print("Já existe um agendamento nesse horário. Tente outro.")
+                    continue
+
+                break
+
+            # 🔹 MOTIVO
+            motivo = input("Motivo da consulta: ")
+
+            agendamento = Agendamento(
+                cpf,
+                data,
+                hora,
+                motivo
+            )
+
+            agendamento_service.criar_agendamento(agendamento)
+
+            print("Agendamento criado com sucesso.")
+    elif opcao == "7":
+
+        agendamentos = agendamento_service.listar_agendamentos()
+
+        if agendamentos:
+
+            print("\n--- AGENDAMENTOS ---")
+
+            for a in agendamentos:
+                print(
+                    f"ID: {a[0]} | "
+                    f"CPF: {formatar_cpf(a[1])} | "
+                    f"Data: {a[2]} | "
+                    f"Hora: {a[3]} | "
+                    f"Motivo: {a[4]}"
+                )
+
+        else:
+            print("Nenhum agendamento encontrado.")
