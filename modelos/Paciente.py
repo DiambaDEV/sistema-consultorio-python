@@ -7,4 +7,9 @@ class Paciente:
         self.data_nascimento = data_nascimento
 
     def __str__(self):
-        return f"Nome: {self.nome} | CPF: {self.cpf} | Telefone: {self.telefone}"
+        return (
+            f"Nome: {self.nome} | "
+            f"CPF: {self.cpf} | "
+            f"Telefone: {self.telefone} | "
+            f"Data de nascimento: {self.data_nascimento}"
+        )

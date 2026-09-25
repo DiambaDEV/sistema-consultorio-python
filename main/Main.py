@@ -1,24 +1,22 @@
+from datetime import datetime
+
 from repositorio.BancoDeDados import BancoDeDados
-db = BancoDeDados()
 from repositorio.PacienteRepository import PacienteRepository
+from repositorio.AgendamentoRepository import AgendamentoRepository
 from services.PacienteService import PacienteService
+from services.AgendamentoService import AgendamentoService
+from modelos.Paciente import Paciente
+from modelos.Agendamento import Agendamento
+from utils.telefone_utils import validar_telefone, formatar_telefone
+from utils.cpf_utils import formatar_cpf, validar_cpf   
+from utils.data_utils import formatar_data 
+
+db = BancoDeDados()
 repository = PacienteRepository(db)
 service = PacienteService(repository)
-
-from modelos.Paciente import Paciente
-from utils.cpf_utils import formatar_cpf
-from utils.cpf_utils import validar_cpf
-from modelos.Agendamento import Agendamento
-from repositorio.AgendamentoRepository import AgendamentoRepository
-from services.AgendamentoService import AgendamentoService
-
 agendamento_repository = AgendamentoRepository(db)
 agendamento_service = AgendamentoService(agendamento_repository)
 
-from datetime import datetime
-from utils.telefone_utils import validar_telefone, formatar_telefone
-from utils.cpf_utils import formatar_cpf, validar_cpf   
-from utils.data_utils import formatar_data  
 
 while True:
 
@@ -30,9 +28,9 @@ while True:
     print("5 - Remover paciente")
     print("6 - Criar agendamento")
     print("7 - Listar agendamentos")
+    print("8 - Buscar agendamento por CPF")
+    print("9 - Buscar agendamento por Data")
     print("0 - Sair")
-
-
 
     opcao = input("Escolha uma opção: ")
 
@@ -53,11 +51,7 @@ while True:
 
         if not validar_cpf(cpf):
             print("CPF inválido.")
-            continue
-
-        if service.buscar_por_cpf(cpf):
-            print("Paciente já cadastrado com esse CPF.")
-            continue    
+            continue 
 
         while True:
 
@@ -66,20 +60,13 @@ while True:
             try:
                 date = datetime.strptime(data_nascimento, "%Y-%m-%d")
 
-                if data > datetime.now():
+                if date > datetime.now():
                     print("Data de nascimento não pode ser no futuro.")
                     continue    
                 break
 
             except ValueError:
                 print("Data inválida. Digite no formato AAAA-MM-DD.")   
-
-        paciente = Paciente(
-            nome,
-            cpf,
-            telefone,
-            data_nascimento
-        )
 
         while True:
 
@@ -91,7 +78,12 @@ while True:
             else:
                 print("Telefone inválido. Digite um telefone DDD + número, com 10 ou 11 dígitos numéricos.")
 
-        
+        paciente = Paciente(
+            nome,
+            cpf,
+            telefone,
+            data_nascimento
+        )
 
         service.cadastrar_paciente(paciente)
 
@@ -199,7 +191,10 @@ while True:
                 data = input("Data de agendamento (AAAA-MM-DD): ")
 
                 try:
-                    datetime.strptime(data, "%Y-%m-%d")
+                    date = datetime.strptime(data, "%Y-%m-%d")
+                    if date.date() < datetime.now().date():
+                        print("Não é possível agendar em datas passadas.")
+                        continue
                     break
                 except ValueError:
                     print("Data inválida. Digite novamente.")
@@ -236,8 +231,6 @@ while True:
             )
 
             agendamento_service.criar_agendamento(agendamento)
-
-            print("Agendamento criado com sucesso.")
     elif opcao == "7":
 
         agendamentos = agendamento_service.listar_agendamentos()
@@ -257,3 +250,93 @@ while True:
 
         else:
             print("Nenhum agendamento encontrado.")
+
+    elif opcao == "8":
+
+        cpf = input("Digite o CPF: ")
+        agendamentos = agendamento_service.buscar_por_cpf(cpf)
+        if agendamentos:
+            for a in agendamentos:
+                print(
+                    f"ID: {a[0]} | "
+                    f"CPF: {formatar_cpf(a[1])} | "
+                    f"Data: {a[2]} | "
+                    f"Hora: {a[3]} | "
+                    f"Motivo: {a[4]}"
+                )
+        else:
+            print("Nenhum agendamento encontrado para esse CPF.")
+    
+    elif opcao == "9":
+
+        data = input("Digite a data (AAAA-MM-DD): ")
+        agendamentos = agendamento_service.buscar_por_data(data)
+        if agendamentos:
+            for a in agendamentos:
+                print(
+                    f"ID: {a[0]} | "
+                    f"CPF: {formatar_cpf(a[1])} | "
+                    f"Data: {a[2]} | "
+                    f"Hora: {a[3]} | "
+                    f"Motivo: {a[4]}"
+                )
+        else:
+            print("Nenhum agendamento encontrado para essa data.")
+
+    elif opcao == "10":
+
+        agendamentos = agendamento_service.listar_agendamentos()
+
+        if not agendamentos:
+            print("Nenhum agendamento encontrado.") 
+        else:
+            print("\n--- AGENDAMENTOS ---")
+
+            for a in agendamentos:
+                print(
+                    f"ID: {a[0]} | "
+                    f"CPF: {formatar_cpf(a[1])} | "
+                    f"Data: {a[2]} | "
+                    f"Hora: {a[3]} | "
+                    f"Motivo: {a[4]}"
+                )
+
+            escolha = input("\nDigite o ID do agendamento que deseja cancelar: ")
+
+            try:
+                id = int(escolha)
+                agendamento_escolhido = None
+
+                for a in agendamentos:
+                    if a[0] == id:
+                        agendamento_escolhido = a
+                        break
+
+                if not agendamento_escolhido:
+                    print("Agendamento não encontrado.")
+                    continue
+
+                print("\nVocê escolheu:")
+                print(
+                    f"ID: {agendamento_escolhido[0]} | "
+                    f"CPF: {formatar_cpf(agendamento_escolhido[1])} | "
+                    f"Data: {agendamento_escolhido[2]} | "
+                    f"Hora: {agendamento_escolhido[3]} | "
+                    f"Motivo: {agendamento_escolhido[4]}"
+                )
+
+                confirmar = input("Confirmar cancelamento? (s/n): ")
+
+                if confirmar.lower() == "s":
+                    agendamento_service.cancelar(id)
+                else:
+                    print("Operação cancelada.")
+
+            except ValueError:
+                print("ID inválido. Digite um número inteiro.")
+
+    elif opcao == "0":
+        print("Encerando o sistema...")
+        break
+    else:
+        print("Opção inválida. Tente novamente.")   

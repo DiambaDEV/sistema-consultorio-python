@@ -20,4 +20,22 @@ class AgendamentoService:
     def listar_agendamentos(self):
         return self.repository.listar()
     
+    # Não agendar em fins de semana
+
+    def buscar_por_cpf(self, cpf):
+        return self.repository.buscar_por_cpf(cpf)
     
+    def buscar_por_data(self, data):
+        return self.repository.buscar_por_data(data)
+    
+    def cancelar(self, id):
+        agendamento = self.repository.buscar_por_id(id)
+
+        if not agendamento:
+            print("Agendamento não encontrado.")
+            return
+        
+        self.repository.cancelar(id)
+        print("Agendamento cancelado com sucesso.")
+
+

@@ -2,9 +2,9 @@ def formatar_cpf(cpf):
     cpf = ''.join(filter(str.isdigit, cpf))
 
     if len(cpf) != 11:
-        return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}."
-    
-    return cpf
+        return cpf  # ✅ retorna sem formatar se inválido
+
+    return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"  # ✅ formata quando tem 11 dígitos
 
 
 def validar_cpf(cpf: str) -> bool:
